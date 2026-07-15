@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CodeGuard AI — {{ result.filename }}</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body   { background: #0d1117; color: #e6edf3; font-family: system-ui, sans-serif; padding: 2rem; }
+    h1     { font-size: 1.4rem; color: #58a6ff; margin-bottom: 0.25rem; }
+    h2     { font-size: 1rem; color: #8b949e; font-weight: 400; margin-bottom: 2rem; }
+    .meta  { color: #8b949e; font-size: 0.8rem; margin-bottom: 2rem; font-family: monospace; }
+
+    .score-row { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 2rem; }
+    .score-box { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 1rem 1.5rem; }
+    .score-num { font-size: 2.5rem; font-weight: 700; font-family: monospace; }
+    .score-label { font-size: 0.75rem; color: #8b949e; margin-top: 0.2rem; }
+
+    .stat { background: #161b22; border-radius: 8px; padding: 0.75rem 1rem; min-width: 90px; }
+    .stat-num { font-size: 1.8rem; font-weight: 700; font-family: monospace; }
+    .stat-label { font-size: 0.7rem; color: #8b949e; text-transform: capitalize; }
+
+    .critical-color { color: #ff4d4f; } .high-color { color: #fa8c16; }
+    .medium-color   { color: #fadb14; } .low-color   { color: #52c41a; }
+
+    .finding { border: 1px solid #30363d; border-radius: 8px; margin-bottom: 0.75rem; overflow: hidden; }
+    .finding-header { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; background: #161b22; flex-wrap: wrap; }
+    .badge { border-radius: 4px; padding: 2px 8px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; font-family: monospace; border: 1px solid; }
+    .badge-critical { background:#2d1216; color:#ff4d4f; border-color:#5c1e22; }
+    .badge-high     { background:#2b1a08; color:#fa8c16; border-color:#5b3408; }
+    .badge-medium   { background:#2b2508; color:#fadb14; border-color:#5b4f08; }
+    .badge-low      { background:#0d2010; color:#52c41a; border-color:#185224; }
+    .rule-id { font-family: monospace; font-size: 0.7rem; color: #58a6ff; background: #1c2d3f; border: 1px solid #1f4068; border-radius: 3px; padding: 1px 6px; }
+    .method  { font-family: monospace; font-size: 0.7rem; color: #8b949e; margin-left: auto; }
+    .line    { font-family: monospace; font-size: 0.7rem; color: #8b949e; }
+
+    .finding-body { padding: 0.75rem 1rem; }
+    .desc  { color: #8b949e; font-size: 0.8rem; margin-bottom: 0.75rem; line-height: 1.5; }
+    pre    { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 0.75rem 1rem; font-size: 0.75rem; color: #a5d6ff; overflow-x: auto; margin-bottom: 0.75rem; }
+    .ai-box { background: #0d1f33; border: 1px solid #1f4068; border-radius: 6px; padding: 0.75rem 1rem; }
+    .ai-title { color: #58a6ff; font-size: 0.7rem; font-weight: 600; font-family: monospace; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+    .ai-row { display: flex; gap: 0.75rem; margin-bottom: 0.4rem; font-size: 0.8rem; }
+    .ai-label { color: #8b949e; font-size: 0.65rem; text-transform: uppercase; min-width: 110px; padding-top: 2px; }
+
+    .no-findings { text-align: center; padding: 3rem; color: #52c41a; border: 1px dashed #185224; border-radius: 10px; }
+    footer { margin-top: 3rem; color: #8b949e; font-size: 0.75rem; text-align: center; }
+  </style>
+</head>
+<body>
+
+<h1>⬡ CodeGuard AI 3.0 — Security Report</h1>
+<h2>{{ result.filename }}</h2>
+<div class="meta">
+  Request ID: {{ result.request_id }} &nbsp;·&nbsp;
+  Analysed: {{ result.analyzed_at.strftime('%Y-%m-%d %H:%M:%S UTC') }} &nbsp;·&nbsp;
+  Status: {{ result.status.value }}
+  {% if not result.ai_available %}&nbsp;·&nbsp; ⚠ AI unavailable{% endif %}
+</div>
+
+{% if result.security_score %}
+<div class="score-row">
+  <div class="score-box">
+    {% set s = result.security_score %}
+    {% set color = "critical-color" if s.score < 40 else ("high-color" if s.score < 60 else ("medium-color" if s.score < 80 else "low-color")) %}
+    <div class="score-num {{ color }}">{{ s.score }}</div>
+    <div class="score-label">Security score · Grade {{ s.grade }}</div>
+  </div>
+  {% for sev in ["critical","high","medium","low"] %}
+  <div class="stat">
+    <div class="stat-num {{ sev }}-color">{{ s.breakdown.get(sev, 0) }}</div>
+    <div class="stat-label">{{ sev }}</div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if result.findings %}
+  {% for f in result.findings %}
+  <div class="finding">
+    <div class="finding-header">
+      <span class="badge badge-{{ f.severity.value }}">{{ f.severity.value }}</span>
+      <span class="rule-id">{{ f.rule_id }}</span>
+      <span style="flex:1; font-size:0.85rem;">{{ f.title }}</span>
+      <span class="method">{{ "⬡ AST" if f.detection_method.value == "ast" else "∼ REGEX" }}</span>
+      {% if f.line_number %}<span class="line">L{{ f.line_number }}</span>{% endif %}
+    </div>
+    <div class="finding-body">
+      <div class="desc">{{ f.description }}</div>
+      {% if f.code_snippet %}
+      <pre><span style="color:#8b949e;margin-right:1rem;">{% if f.line_number %}L{{ f.line_number }}{% endif %}</span>{{ f.code_snippet }}</pre>
+      {% endif %}
+      {% if f.ai_explanation %}
+      <div class="ai-box">
+        <div class="ai-title">✦ AI Explanation</div>
+        {% for label, val in [
+            ("Explanation",     f.ai_explanation.explanation),
+            ("Risk",            f.ai_explanation.risk),
+            ("Attack scenario", f.ai_explanation.attack_scenario),
+            ("Secure fix",      f.ai_explanation.secure_fix),
+            ("Best practice",   f.ai_explanation.best_practice),
+            ("OWASP",           f.ai_explanation.owasp_reference),
+            ("CWE",             f.ai_explanation.cwe_reference),
+        ] %}
+        <div class="ai-row"><span class="ai-label">{{ label }}</span><span>{{ val }}</span></div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+{% else %}
+  <div class="no-findings">✓ No vulnerabilities detected.</div>
+{% endif %}
+
+<footer>Generated by CodeGuard AI 3.0 &nbsp;·&nbsp; Static analysis only &nbsp;·&nbsp; AI never decides vulnerability</footer>
+</body>
+</html>

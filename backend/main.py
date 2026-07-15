@@ -9,9 +9,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.config.settings import get_settings
+from backend.api.v1.routes.analyze import router as analyze_router
 
 # ---------------------------------------------------------------------------
-# Logging (structured, single config point)
+# Logging
 # ---------------------------------------------------------------------------
 logging.basicConfig(
     level=logging.INFO,
@@ -20,7 +21,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# App factory
+# App
 # ---------------------------------------------------------------------------
 settings = get_settings()
 
@@ -41,11 +42,14 @@ app.add_middleware(
 )
 
 # ---------------------------------------------------------------------------
-# Routers (registered in Milestone 3)
+# Routers
 # ---------------------------------------------------------------------------
-# from backend.api.v1.routes.analyze import router as analyze_router
-# app.add_router(analyze_router, prefix="/api/v1")
+app.include_router(analyze_router, prefix="/api/v1")
 
+
+# ---------------------------------------------------------------------------
+# Health
+# ---------------------------------------------------------------------------
 @app.get("/api/health", tags=["health"])
 async def health() -> dict:
     return {"status": "ok", "version": app.version}
