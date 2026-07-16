@@ -147,8 +147,9 @@ def create_analysis_service() -> AnalysisService:
     Wire up real implementations as they become available.
     Milestones 4–7 import and pass their engines here.
     """
+    from backend.analyzers.ast_analyzer import ASTAnalyzer  # M4 ✓
     return AnalysisService(
-        ast_analyzer    = None,   # M4: ASTAnalyzer()
+        ast_analyzer    = ASTAnalyzer(),
         regex_scanner   = None,   # M5: RegexScanner()
         severity_engine = None,   # M6/7: SeverityEngine()
     )

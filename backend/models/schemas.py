@@ -61,6 +61,8 @@ class Finding(BaseModel):
     line_number:      Optional[int]   = None
     column:           Optional[int]   = None
     code_snippet:     Optional[str]   = None
+    recommendation:   Optional[str]   = None
+    cwe_reference:    Optional[str]   = None
     ai_explanation:   Optional[AIExplanation] = None  # None if AI unavailable
 
 
